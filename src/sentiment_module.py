@@ -35,27 +35,41 @@ class BasicSentimentModule(dspy.Module):
             # Extract sentiment from response
             sentiment = self._extract_sentiment(response, review_text)
             
+            # If still unclear, analyze review content directly
+            if sentiment is None:
+                sentiment = self._analyze_review_content(review_text)
+            
             # Return as DSPy Prediction
             return dspy.Prediction(sentiment=sentiment)
         except Exception as e:
-            # Fallback to negative on error
-            return dspy.Prediction(sentiment="negative")
+            # On error, try to analyze the review content
+            try:
+                sentiment = self._analyze_review_content(review_text)
+                return dspy.Prediction(sentiment=sentiment)
+            except:
+                # Ultimate fallback
+                return dspy.Prediction(sentiment="negative")
     
     def _extract_sentiment(self, response: str, review: str = "") -> str:
-        """Extract sentiment from model response."""
-        if isinstance(response, list) and len(response) > 0:
-            # Handle list response format
-            if isinstance(response[0], dict) and 'text' in response[0]:
-                text = response[0]['text']
-            else:
-                text = str(response[0])
-        else:
-            text = str(response)
+        """Extract sentiment from model response with improved logic."""
+        # Handle different response formats
+        if isinstance(response, dict):
+            response = response.get('text', str(response))
+        elif isinstance(response, list):
+            response = response[0] if response else ""
+            if isinstance(response, dict):
+                response = response.get('text', str(response))
         
-        # Normalize and extract
-        text_lower = text.lower().strip()
+        text_lower = str(response).lower().strip()
         
-        # Look for explicit positive/negative in response
+        # First, look for explicit POSITIVE/NEGATIVE at the start (our prompt format)
+        first_line = text_lower.split('\n')[0].strip()
+        if first_line == 'positive' or first_line.startswith('positive'):
+            return "positive"
+        if first_line == 'negative' or first_line.startswith('negative'):
+            return "negative"
+        
+        # Look for clear sentiment indicators in the response
         if 'positive' in text_lower and 'negative' not in text_lower:
             return "positive"
         elif 'negative' in text_lower and 'positive' not in text_lower:
@@ -66,23 +80,12 @@ class BasicSentimentModule(dspy.Module):
             neg_idx = text_lower.rfind('negative')
             return "positive" if pos_idx > neg_idx else "negative"
         
-        # If no clear sentiment in response, analyze the review itself
+        # If no clear sentiment in response, analyze the review content
         if review:
             return self._analyze_review_content(review)
         
-        # Last resort: simple heuristics on response
-        positive_words = ['good', 'great', 'love', 'excellent', 'amazing', 'wonderful', 'fantastic']
-        negative_words = ['bad', 'poor', 'hate', 'terrible', 'awful', 'horrible', 'worst']
-        
-        positive_count = sum(1 for word in positive_words if word in text_lower)
-        negative_count = sum(1 for word in negative_words if word in text_lower)
-        
-        if positive_count > negative_count:
-            return "positive"
-        elif negative_count > positive_count:
-            return "negative"
-        else:
-            return "negative"  # Default
+        # Last resort: return None to indicate uncertainty rather than defaulting
+        return None
     
     def _analyze_review_content(self, review: str) -> str:
         """Analyze review content directly as fallback."""
