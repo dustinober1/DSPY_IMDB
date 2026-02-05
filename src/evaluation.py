@@ -3,7 +3,6 @@
 from typing import List, Dict, Tuple
 import pandas as pd
 from collections import defaultdict
-from src.data_loader import IMDBExample
 from src.sentiment_module import normalize_sentiment
 
 
@@ -69,7 +68,7 @@ def calculate_metrics(
 
 def evaluate_model(
     model,
-    test_data: List[IMDBExample],
+    test_data: List,
     verbose: bool = True
 ) -> Tuple[Dict[str, float], List[str]]:
     """
@@ -94,15 +93,20 @@ def evaluate_model(
     
     for example in iterator:
         try:
-            pred = model(review=example.text)
+            # Access text attribute from Example
+            review_text = example.text if hasattr(example, 'text') else str(example)
+            pred = model(review=review_text)
             predictions.append(pred.sentiment)
-            ground_truth.append(example.label)
+            # Access label attribute from Example
+            true_label = example.label if hasattr(example, 'label') else 'negative'
+            ground_truth.append(true_label)
         except Exception as e:
             if verbose:
                 print(f"\nError on example: {e}")
             # Default to negative on error
             predictions.append("negative")
-            ground_truth.append(example.label)
+            true_label = example.label if hasattr(example, 'label') else 'negative'
+            ground_truth.append(true_label)
     
     metrics = calculate_metrics(predictions, ground_truth)
     
