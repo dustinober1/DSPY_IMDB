@@ -44,7 +44,12 @@ def load_imdb_data(
     # Process training data
     train_raw = dataset["train"]
     if subset_size:
-        train_raw = train_raw.select(range(min(subset_size, len(train_raw))))
+        # Shuffle to get balanced samples instead of all negative/positive
+        import random
+        indices = list(range(len(train_raw)))
+        random.seed(42)  # For reproducibility
+        random.shuffle(indices)
+        train_raw = train_raw.select(indices[:min(subset_size, len(train_raw))])
     
     print(f"Processing {len(train_raw)} training examples...")
     train_examples = [
@@ -65,9 +70,12 @@ def load_imdb_data(
     # Process test data
     test_raw = dataset["test"]
     if subset_size:
-        # Use proportional subset for test
+        # Use proportional subset for test, also shuffled
         test_subset_size = int(subset_size * 0.3)
-        test_raw = test_raw.select(range(min(test_subset_size, len(test_raw))))
+        indices = list(range(len(test_raw)))
+        random.seed(43)  # Different seed for test set
+        random.shuffle(indices)
+        test_raw = test_raw.select(indices[:min(test_subset_size, len(test_raw))])
     
     print(f"Processing {len(test_raw)} test examples...")
     test_data = [
