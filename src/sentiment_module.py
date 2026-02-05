@@ -12,21 +12,36 @@ class BasicSentimentModule(dspy.Module):
         # Use a simple text-based prompt instead of structured JSON
         self.prompt_template = dspy.Predict("review -> sentiment")
     
-    def forward(self, review: str) -> dspy.Prediction:
+    def forward(self, text: str = None, review: str = None) -> dspy.Prediction:
         """
-        Classify sentiment of a review.
+        Classify sentiment of a movie review.
         
         Args:
-            review: The review text to classify
+            text: The review text to classify (DSPy optimizer uses this)
+            review: The review text to classify (manual calls use this)
             
         Returns:
             DSPy Prediction with sentiment field
         """
-        # Truncate very long reviews to avoid token limits
-        review_text = review[:500] if len(review) > 500 else review
+        # Accept either 'text' or 'review' parameter
+        review_text = text if text is not None else review
+        if review_text is None:
+            return dspy.Prediction(sentiment="negative")
         
-        # Create a simple prompt
-        prompt = f"Classify this movie review as 'positive' or 'negative'.\n\nReview: {review_text}\n\nSentiment:"
+        # Truncate very long reviews to avoid token limits
+        review_text = review_text[:500] if len(review_text) > 500 else review_text
+        
+        # Create a clear, explicit prompt
+        prompt = f"""You are a movie review sentiment classifier. Classify the following review as either POSITIVE or NEGATIVE.
+
+Review: {review_text}
+
+Instructions:
+- If the review is mostly favorable, praising the movie, or recommends it, respond with: POSITIVE
+- If the review is mostly critical, negative, or discourages watching, respond with: NEGATIVE
+- Respond with ONLY the word POSITIVE or NEGATIVE, nothing else.
+
+Classification:"""
         
         try:
             # Get response from model
