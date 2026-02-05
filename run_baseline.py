@@ -24,8 +24,8 @@ def main():
     parser.add_argument(
         "--model",
         type=str,
-        default="qwen2:0.5b",
-        help="Ollama model name (default: qwen2:0.5b)"
+        default="jewelzufo/Qwen3-0.6B-GGUF:IQ4_NL",
+        help="Ollama model name (default: jewelzufo/Qwen3-0.6B-GGUF:IQ4_NL)"
     )
     parser.add_argument(
         "--output-dir",

@@ -5,7 +5,7 @@ from typing import Optional
 
 
 def setup_ollama_model(
-    model_name: str = "qwen2:0.5b",
+    model_name: str = "jewelzufo/Qwen3-0.6B-GGUF:IQ4_NL",
     base_url: str = "http://localhost:11434",
     temperature: float = 0.0,
     max_tokens: int = 150,
