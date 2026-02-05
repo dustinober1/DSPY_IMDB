@@ -117,18 +117,24 @@ class ChainOfThoughtSentimentModule(dspy.Module):
     def __init__(self):
         super().__init__()
     
-    def forward(self, review: str) -> dspy.Prediction:
+    def forward(self, text: str = None, review: str = None) -> dspy.Prediction:
         """
         Classify sentiment with reasoning.
         
         Args:
-            review: The review text to classify
+            text: The review text to classify (DSPy optimizer uses this)
+            review: The review text to classify (manual calls use this)
             
         Returns:
             DSPy Prediction with sentiment and rationale fields
         """
+        # Accept either 'text' or 'review' parameter
+        review_text = text if text is not None else review
+        if review_text is None:
+            return dspy.Prediction(sentiment="negative", rationale="No input provided")
+        
         # Truncate very long reviews
-        review_text = review[:500] if len(review) > 500 else review
+        review_text = review_text[:500] if len(review_text) > 500 else review_text
         
         # Create a prompt that encourages reasoning
         prompt = f"""Analyze this movie review and determine if it's positive or negative.

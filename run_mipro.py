@@ -103,6 +103,7 @@ def main():
         
         optimizer = MIPROv2(
             metric=sentiment_metric,
+            auto=None,  # Disable auto mode to use custom parameters
             num_candidates=args.num_candidates,
             init_temperature=args.init_temperature,
             verbose=True
