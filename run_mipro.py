@@ -57,6 +57,12 @@ def main():
         help="Number of prompt candidates to generate (default: 5)"
     )
     parser.add_argument(
+        "--num-trials",
+        type=int,
+        default=None,
+        help="Number of trials per candidate (default: auto-calculated as num_candidates + 1)"
+    )
+    parser.add_argument(
         "--init-temperature",
         type=float,
         default=1.0,
@@ -94,7 +100,9 @@ def main():
     
     # Optimize with MIPRO
     print("\n5. Optimizing with MIPRO...")
+    num_trials = args.num_trials if args.num_trials else args.num_candidates + 1
     print(f"   Generating {args.num_candidates} prompt candidates")
+    print(f"   Number of trials: {num_trials}")
     print(f"   Temperature: {args.init_temperature}")
     print("   This may take several minutes...")
     
@@ -105,6 +113,7 @@ def main():
             metric=sentiment_metric,
             auto=None,  # Disable auto mode to use custom parameters
             num_candidates=args.num_candidates,
+            num_trials=num_trials,
             init_temperature=args.init_temperature,
             verbose=True
         )
@@ -162,6 +171,7 @@ def main():
         "train_size": args.train_size,
         "test_size": len(test_data),
         "num_candidates": args.num_candidates,
+        "num_trials": num_trials,
         "init_temperature": args.init_temperature,
         "metrics": metrics,
         "predictions": predictions
