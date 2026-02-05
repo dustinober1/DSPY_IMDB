@@ -33,7 +33,7 @@ class BasicSentimentModule(dspy.Module):
             response = dspy.settings.lm(prompt)
             
             # Extract sentiment from response
-            sentiment = self._extract_sentiment(response)
+            sentiment = self._extract_sentiment(response, review_text)
             
             # Return as DSPy Prediction
             return dspy.Prediction(sentiment=sentiment)
@@ -41,7 +41,7 @@ class BasicSentimentModule(dspy.Module):
             # Fallback to negative on error
             return dspy.Prediction(sentiment="negative")
     
-    def _extract_sentiment(self, response: str) -> str:
+    def _extract_sentiment(self, response: str, review: str = "") -> str:
         """Extract sentiment from model response."""
         if isinstance(response, list) and len(response) > 0:
             # Handle list response format
@@ -55,22 +55,60 @@ class BasicSentimentModule(dspy.Module):
         # Normalize and extract
         text_lower = text.lower().strip()
         
-        # Look for positive indicators
-        if any(word in text_lower for word in ['positive', 'pos', 'good', 'great', 'excellent']):
+        # Look for explicit positive/negative in response
+        if 'positive' in text_lower and 'negative' not in text_lower:
             return "positive"
-        # Look for negative indicators
-        elif any(word in text_lower for word in ['negative', 'neg', 'bad', 'poor', 'terrible']):
+        elif 'negative' in text_lower and 'positive' not in text_lower:
+            return "negative"
+        elif 'positive' in text_lower and 'negative' in text_lower:
+            # Both mentioned - check which comes last
+            pos_idx = text_lower.rfind('positive')
+            neg_idx = text_lower.rfind('negative')
+            return "positive" if pos_idx > neg_idx else "negative"
+        
+        # If no clear sentiment in response, analyze the review itself
+        if review:
+            return self._analyze_review_content(review)
+        
+        # Last resort: simple heuristics on response
+        positive_words = ['good', 'great', 'love', 'excellent', 'amazing', 'wonderful', 'fantastic']
+        negative_words = ['bad', 'poor', 'hate', 'terrible', 'awful', 'horrible', 'worst']
+        
+        positive_count = sum(1 for word in positive_words if word in text_lower)
+        negative_count = sum(1 for word in negative_words if word in text_lower)
+        
+        if positive_count > negative_count:
+            return "positive"
+        elif negative_count > positive_count:
             return "negative"
         else:
-            # Default based on simple heuristics
-            # Count positive/negative words in response
-            positive_count = sum(1 for word in ['good', 'great', 'love', 'excellent', 'amazing'] if word in text_lower)
-            negative_count = sum(1 for word in ['bad', 'poor', 'hate', 'terrible', 'awful'] if word in text_lower)
+            return "negative"  # Default
+    
+    def _analyze_review_content(self, review: str) -> str:
+        """Analyze review content directly as fallback."""
+        review_lower = review.lower()
+        
+        # Count sentiment indicators in the review
+        positive_words = ['good', 'great', 'love', 'excellent', 'amazing', 'wonderful', 
+                         'fantastic', 'best', 'perfect', 'enjoyed', 'brilliant', 'outstanding']
+        negative_words = ['bad', 'poor', 'hate', 'terrible', 'awful', 'horrible', 
+                         'worst', 'boring', 'waste', 'disappointed', 'disappointing']
+        
+        positive_count = sum(1 for word in positive_words if word in review_lower)
+        negative_count = sum(1 for word in negative_words if review_lower)
+        
+        # Weight by review length
+        if len(review) > 0:
+            positive_score = positive_count / (len(review) / 100)
+            negative_score = negative_count / (len(review) / 100)
             
-            if positive_count > negative_count:
+            if positive_score > negative_score:
                 return "positive"
-            else:
+            elif negative_score > positive_score:
                 return "negative"
+        
+        # If still unclear, default to negative
+        return "negative"
 
 
 class ChainOfThoughtSentimentModule(dspy.Module):
