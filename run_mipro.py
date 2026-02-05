@@ -99,9 +99,9 @@ def main():
     print("   This may take several minutes...")
     
     try:
-        from dspy.teleprompt import MIPRO
+        from dspy.teleprompt import MIPROv2
         
-        optimizer = MIPRO(
+        optimizer = MIPROv2(
             metric=sentiment_metric,
             num_candidates=args.num_candidates,
             init_temperature=args.init_temperature,
@@ -155,7 +155,7 @@ def main():
     
     results = {
         "timestamp": timestamp,
-        "optimizer": "MIPRO",
+        "optimizer": "MIPROv2",
         "model": args.model,
         "subset_size": args.subset,
         "train_size": args.train_size,

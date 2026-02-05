@@ -6,13 +6,13 @@ from datasets import load_dataset
 from tqdm import tqdm
 
 
-class IMDBExample(dspy.Example):
-    """DSPy Example wrapper for IMDB reviews."""
-    
-    def __init__(self, text: str, label: str):
-        super().__init__(text=text, label=label)
-        self.text = text
-        self.label = label
+def create_imdb_example(text: str, label: str) -> dspy.Example:
+    """Create a properly configured DSPy Example for IMDB data."""
+    # Create example with both text and label
+    example = dspy.Example(text=text, label=label)
+    # Set 'text' as the input field and 'label' as the output
+    example = example.with_inputs("text")
+    return example
 
 
 def load_imdb_data(
@@ -20,7 +20,7 @@ def load_imdb_data(
     train_split: float = 0.7,
     dev_split: float = 0.15,
     cache_dir: str = "./data"
-) -> Tuple[List[IMDBExample], List[IMDBExample], List[IMDBExample]]:
+) -> Tuple[List[dspy.Example], List[dspy.Example], List[dspy.Example]]:
     """
     Load and prepare the IMDB dataset for DSPy.
     
@@ -48,7 +48,7 @@ def load_imdb_data(
     
     print(f"Processing {len(train_raw)} training examples...")
     train_examples = [
-        IMDBExample(
+        create_imdb_example(
             text=example["text"],
             label=label_map[example["label"]]
         )
@@ -71,7 +71,7 @@ def load_imdb_data(
     
     print(f"Processing {len(test_raw)} test examples...")
     test_data = [
-        IMDBExample(
+        create_imdb_example(
             text=example["text"],
             label=label_map[example["label"]]
         )
@@ -86,7 +86,7 @@ def load_imdb_data(
     return train_data, dev_data, test_data
 
 
-def get_sample_examples(n: int = 5) -> List[IMDBExample]:
+def get_sample_examples(n: int = 5) -> List[dspy.Example]:
     """Get a small sample of examples for quick testing."""
     train_data, _, _ = load_imdb_data(subset_size=n)
     return train_data[:n]
