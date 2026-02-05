@@ -68,23 +68,34 @@ Classification:"""
     def _extract_sentiment(self, response: str, review: str = "") -> str:
         """Extract sentiment from model response with improved logic."""
         # Handle different response formats
+        if isinstance(response, list):
+            # Gemma3 returns ['POSITIVE\n'] or ['NEGATIVE\n']
+            if response:
+                response = response[0]
+            else:
+                response = ""
+        
         if isinstance(response, dict):
             response = response.get('text', str(response))
-        elif isinstance(response, list):
-            response = response[0] if response else ""
-            if isinstance(response, dict):
-                response = response.get('text', str(response))
         
-        text_lower = str(response).lower().strip()
+        # Clean up the response
+        text_clean = str(response).strip().upper()
+        text_lower = text_clean.lower()
         
-        # First, look for explicit POSITIVE/NEGATIVE at the start (our prompt format)
-        first_line = text_lower.split('\n')[0].strip()
-        if first_line == 'positive' or first_line.startswith('positive'):
+        # Direct match for POSITIVE or NEGATIVE (most common case)
+        if text_clean == 'POSITIVE' or text_clean.startswith('POSITIVE'):
             return "positive"
-        if first_line == 'negative' or first_line.startswith('negative'):
+        if text_clean == 'NEGATIVE' or text_clean.startswith('NEGATIVE'):
             return "negative"
         
-        # Look for clear sentiment indicators in the response
+        # Check first line
+        first_line = text_lower.split('\n')[0].strip()
+        if 'positive' in first_line and 'negative' not in first_line:
+            return "positive"
+        if 'negative' in first_line and 'positive' not in first_line:
+            return "negative"
+        
+        # Look for sentiment indicators anywhere in response
         if 'positive' in text_lower and 'negative' not in text_lower:
             return "positive"
         elif 'negative' in text_lower and 'positive' not in text_lower:
@@ -99,7 +110,7 @@ Classification:"""
         if review:
             return self._analyze_review_content(review)
         
-        # Last resort: return None to indicate uncertainty rather than defaulting
+        # Last resort: return None to indicate uncertainty
         return None
     
     def _analyze_review_content(self, review: str) -> str:
