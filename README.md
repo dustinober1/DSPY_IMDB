@@ -96,6 +96,26 @@ python run_optimized.py --model llama2:7b --subset 100
 python run_optimized.py --subset 200 --train-size 100 --max-bootstrapped-demos 8
 ```
 
+### Try Advanced Optimizers
+
+**MIPRO (Multi-prompt Instruction Proposal Optimizer)**
+```bash
+# MIPRO generates and tests multiple prompt variations
+python run_mipro.py --subset 100 --train-size 50 --num-candidates 5
+```
+
+**COPRO (Coordinate Prompt Optimization)**
+```bash
+# COPRO uses coordinate descent for prompt optimization
+python run_copro.py --subset 100 --train-size 50 --depth 3 --breadth 5
+```
+
+**Compare All Approaches**
+```bash
+# After running baseline, optimized, MIPRO, and COPRO
+python compare_all.py
+```
+
 ### Full Dataset Evaluation
 
 ```bash
