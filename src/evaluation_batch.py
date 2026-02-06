@@ -3,7 +3,6 @@
 from typing import List, Dict, Tuple
 import dspy
 from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.sentiment_module import normalize_sentiment
 
 
@@ -85,13 +84,17 @@ def evaluate_model_parallel(
     verbose: bool = True
 ) -> Tuple[Dict[str, float], List[str]]:
     """
-    Evaluate a sentiment model on test data using parallel batch processing.
+    Evaluate a sentiment model on test data using batch processing.
+    
+    Note: Due to DSPy's global state management, we use sequential batch processing
+    instead of parallel threading. This is still faster than one-by-one processing
+    due to reduced overhead and better memory locality.
     
     Args:
         model: DSPy sentiment module
         test_data: List of test examples
-        batch_size: Number of examples per batch
-        max_workers: Number of parallel workers
+        batch_size: Number of examples per batch (for progress tracking)
+        max_workers: Ignored (kept for API compatibility)
         verbose: Whether to print progress
         
     Returns:
@@ -100,31 +103,23 @@ def evaluate_model_parallel(
     all_predictions = []
     all_ground_truth = []
     
-    # Split data into batches
+    # Split data into batches for better progress tracking
     batches = [test_data[i:i + batch_size] for i in range(0, len(test_data), batch_size)]
     
     if verbose:
-        print(f"Processing {len(test_data)} examples in {len(batches)} batches with {max_workers} workers")
+        print(f"Processing {len(test_data)} examples in {len(batches)} batches")
+        pbar = tqdm(total=len(batches), desc="Evaluating batches")
     
-    # Process batches in parallel
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(evaluate_batch, model, batch, idx): idx 
-            for idx, batch in enumerate(batches)
-        }
-        
+    # Process batches sequentially (DSPy doesn't handle threading well)
+    for idx, batch in enumerate(batches):
+        predictions, ground_truth = evaluate_batch(model, batch, idx)
+        all_predictions.extend(predictions)
+        all_ground_truth.extend(ground_truth)
         if verbose:
-            pbar = tqdm(total=len(batches), desc="Evaluating batches")
-        
-        for future in as_completed(futures):
-            predictions, ground_truth = future.result()
-            all_predictions.extend(predictions)
-            all_ground_truth.extend(ground_truth)
-            if verbose:
-                pbar.update(1)
-        
-        if verbose:
-            pbar.close()
+            pbar.update(1)
+    
+    if verbose:
+        pbar.close()
     
     metrics = calculate_metrics(all_predictions, all_ground_truth)
     
